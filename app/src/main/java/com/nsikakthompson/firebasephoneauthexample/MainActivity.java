@@ -1,5 +1,6 @@
 package com.nsikakthompson.firebasephoneauthexample;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -7,6 +8,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
@@ -26,14 +28,18 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.PhoneAuthCredential;
 import com.google.firebase.auth.PhoneAuthProvider;
 
-import java.util.concurrent.TimeUnit;
+import java.util.Locale;
+
+import io.michaelrocks.libphonenumber.android.NumberParseException;
+import io.michaelrocks.libphonenumber.android.PhoneNumberUtil;
+import io.michaelrocks.libphonenumber.android.Phonenumber;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
 
     public static final int RC_SIGN_IN = 001;
     private static final String TAG = MainActivity.class.getSimpleName();
-
+    private PhoneNumberUtil phoneNumberUtil = null;
 
     // [START declare_auth]
     private FirebaseAuth mAuth;
@@ -110,13 +116,51 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void startPhoneNumberVerification(String phoneNumber) {
+        // Use the library’s functions
+        phoneNumberUtil = PhoneNumberUtil.createInstance(getApplicationContext());
+        Phonenumber.PhoneNumber phNumberProto = null;
+        try {
+            TelephonyManager tm = (TelephonyManager)this.getSystemService(Context.TELEPHONY_SERVICE);
+            String countryCodeValue = tm.getNetworkCountryIso();
+            Phonenumber.PhoneNumber example=phoneNumberUtil.getExampleNumber(countryCodeValue);
+            // I set the default region to PH (Philippines)
+            // You can find your country code here http://www.iso.org/iso/country_names_and_code_elements
+            phNumberProto = phoneNumberUtil.parse(phoneNumber, "PK");
 
-        PhoneAuthProvider.getInstance().verifyPhoneNumber(
+        } catch (NumberParseException e) {
+            // if there’s any error
+           e.printStackTrace();//("NumberParseException was thrown: " + e.toString());
+        }
+
+        // check if the number is valid
+        boolean isValid = phoneNumberUtil.isValidNumber(phNumberProto);
+        if (isValid) {
+
+            // get the valid number’s international format
+            String internationalFormat = phoneNumberUtil.format(
+                    phNumberProto,
+                    PhoneNumberUtil.PhoneNumberFormat.INTERNATIONAL);
+
+            Toast.makeText(
+                    getBaseContext(),
+                    "Phone number VALID: "+internationalFormat,
+                    Toast.LENGTH_SHORT).show();
+
+        } else {
+
+            // prompt the user when the number is invalid
+            Toast.makeText(
+                    getBaseContext(),
+                    "Phone number is INVALID: "+phoneNumber,
+                    Toast.LENGTH_SHORT).show();
+
+        }
+       /* PhoneAuthProvider.getInstance().verifyPhoneNumber(
                 phoneNumber,        // Phone number to verify
                 60,                 // Timeout duration
                 TimeUnit.SECONDS,   // Unit of timeout
                 this,               // Activity (for callback binding)
-                mCallbacks);        // OnVerificationStateChangedCallbacks
+                mCallbacks);        // OnVerificationStateChangedCallbacks*/
 
 
     }
